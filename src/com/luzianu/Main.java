@@ -24,7 +24,7 @@ public class Main {
 
     public static String osuRootDir;
 
-    public static final String CURRENT_VERSION = "1.0.0.0";
+    public static final String CURRENT_VERSION = "v1.0";
     public static final String gitHubLatestUrl = "https://github.com/LuzianU/OsuCollectionGenerator/releases/latest";
 
     public static HashMap<String, UserVariable> userVariables = new HashMap<>();
