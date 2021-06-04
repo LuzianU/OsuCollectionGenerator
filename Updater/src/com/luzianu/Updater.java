@@ -59,6 +59,8 @@ public class Updater {
         if (args.length != 0) // only if this program was run by the main one
             command.add("-noUpdate");
 
+        System.out.println(command);
+
         final ProcessBuilder builder = new ProcessBuilder(command);
         builder.start();
     }

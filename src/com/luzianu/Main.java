@@ -98,6 +98,7 @@ public class Main {
                     command.add(javaBin);
                     command.add("-jar");
                     command.add(currentJar.getPath().replace(currentJar.getName(), "") + "Updater.jar");
+                    command.add(currentJar.getPath());
 
                     final ProcessBuilder builder = new ProcessBuilder(command);
                     builder.start();
