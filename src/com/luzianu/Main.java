@@ -25,7 +25,7 @@ public class Main {
     public static String osuRootDir;
 
     public static final String CURRENT_VERSION = "v1.0";
-    public static final String gitHubLatestUrl = "https://github.com/LuzianU/OsuCollectionGenerator/releases/latest";
+    public static final String GIT_HUB_LATEST_URL = "https://github.com/LuzianU/OsuCollectionGenerator/releases/latest";
 
     public static HashMap<String, UserVariable> userVariables = new HashMap<>();
 
@@ -71,12 +71,12 @@ public class Main {
             boolean runUpdater = false;
             String latestVersion = null;
             try {
-                HttpURLConnection con = (HttpURLConnection) (new URL(gitHubLatestUrl).openConnection());
+                HttpURLConnection con = (HttpURLConnection) (new URL(GIT_HUB_LATEST_URL).openConnection());
                 con.setInstanceFollowRedirects(false);
                 con.connect();
                 String location = con.getHeaderField("Location");
-                if (location != null && !location.contains(gitHubLatestUrl)) // redirect happened
-                    latestVersion = location.replace(gitHubLatestUrl.replace("latest", "tag/"), "");
+                if (location != null && !location.contains(GIT_HUB_LATEST_URL)) // redirect happened
+                    latestVersion = location.replace(GIT_HUB_LATEST_URL.replace("latest", "tag/"), "");
             } catch (IOException e) {
                 e.printStackTrace();
             }
