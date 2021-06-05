@@ -23,8 +23,9 @@ public class Main {
     private static OsuDb osuDb;
 
     public static String osuRootDir;
+    public static String osuSongDir;
 
-    public static final String CURRENT_VERSION = "v1.0";
+    public static final String CURRENT_VERSION = "v1.1";
     public static final String GIT_HUB_LATEST_URL = "https://github.com/LuzianU/OsuCollectionGenerator/releases/latest";
 
     public static HashMap<String, UserVariable> userVariables = new HashMap<>();
@@ -126,8 +127,7 @@ public class Main {
 
             // skip non osu!std maps
             if (beatmap.mode == 0) {
-
-                File osuFile = Paths.get(osuRootDir, "Songs", beatmap.folderName, beatmap.nameOfOsuFile).toFile();
+                File osuFile = Paths.get(osuSongDir, beatmap.folderName, beatmap.nameOfOsuFile).toFile();
 
                 if (osuFile.exists()) {
                     BeatmapInfo info = Analyzer.analyze(osuFile);
@@ -197,7 +197,9 @@ public class Main {
                 MIN_STREAM_BPM,
                 120,
                 "<html>[Integer] Min. 1/4 bpm of a \"stream\" to be recognized as one." +
-                "<br>A \"stream\" is at least two succeeding objects within the specified bpm range</html>",
+                "<br>A \"stream\" is at least two succeeding objects within the specified bpm range." +
+                "<br>You might want to set this to something a bit higher like 150+ if you are primarily interested" +
+                "<br>in 230+ bpm stream maps.</html>",
                 orderInUi++,
                 false));
 
@@ -339,6 +341,22 @@ public class Main {
             }
             osuRootDir = properties.getProperty("osuRootDir");
             System.out.println("osuRootDir: " + osuRootDir);
+
+            // get osu songs dir
+            File cfgFile = Paths.get(osuRootDir, "osu!." + System.getProperty("user.name") + ".cfg").toFile();
+            try (BufferedReader br = new BufferedReader(new FileReader(cfgFile))) {
+                for (String line; (line = br.readLine()) != null; ) {
+                    if (line.startsWith("BeatmapDirectory")) {
+                        line = line.substring(line.indexOf("=") + 1).trim();
+                        if (Paths.get(line).isAbsolute())
+                            osuSongDir = line;
+                        else
+                            osuSongDir = Paths.get(osuRootDir, line).toString();
+                        System.out.println("osuSongDir: " + osuSongDir);
+                        break;
+                    }
+                }
+            }
         }
 
         return true;

@@ -14,6 +14,7 @@ import java.awt.dnd.DropTargetDropEvent;
 import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.nio.file.Paths;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -85,11 +86,11 @@ public class UserInterface {
         buttonGenerate.addActionListener(e -> {
             if (saveVariables()) {
                 JFileChooser fc = new JFileChooser();
-                fc.setDialogTitle("Choose where to save the generated collection. Do NOT overwrite your osu collection.db file!");
+                fc.setDialogTitle("Choose where to save the generated collection. Do NOT overwrite any of your osu .db files!");
                 fc.setFileFilter(new FileFilter() {
                     @Override
                     public boolean accept(File f) {
-                        return f.getName().endsWith(".db");
+                        return f.isDirectory() || f.getName().endsWith(".db");
                     }
 
                     @Override
@@ -98,26 +99,33 @@ public class UserInterface {
                     }
                 });
 
-                if (fc.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
+                if (fc.showSaveDialog(frame) == JFileChooser.APPROVE_OPTION) {
 
-                    Thread thread = new Thread(() -> {
-                        swapToGenerateProgressBar();
-                        File file = fc.getSelectedFile();
-                        if (!file.getName().endsWith(".db"))
-                            file = new File(file.getAbsolutePath() + ".db");
-                        System.out.println(file.getAbsolutePath());
-                        if (Main.generateFromOsuDb(this, file)) {
-                            JOptionPane.showMessageDialog(frame, "Collections successfully generated!\n" +
-                                                                 "You can open the database file with CollectionManager\n" +
-                                                                 "to add them to your osu collections.", ":)",
-                                                          JOptionPane.PLAIN_MESSAGE);
-                        } else {
-                            JOptionPane.showMessageDialog(frame, "Error :(");
-                        }
-                        swapToButtonGenerate();
-                    });
-                    thread.start();
-
+                    if (fc.getSelectedFile().equals(Paths.get(Main.osuRootDir, "osu!.db").toFile()) ||
+                        fc.getSelectedFile().equals(Paths.get(Main.osuRootDir, "collection.db").toFile()) ||
+                        fc.getSelectedFile().equals(Paths.get(Main.osuRootDir, "presence.db").toFile()) ||
+                        fc.getSelectedFile().equals(Paths.get(Main.osuRootDir, "scores.db").toFile())) {
+                        JOptionPane.showMessageDialog(frame, "Do NOT overwrite any of your osu .db files!",
+                                                      ":|", JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        Thread thread = new Thread(() -> {
+                            swapToGenerateProgressBar();
+                            File file = fc.getSelectedFile();
+                            if (!file.getName().endsWith(".db"))
+                                file = new File(file.getAbsolutePath() + ".db");
+                            System.out.println(file.getAbsolutePath());
+                            if (Main.generateFromOsuDb(this, file)) {
+                                JOptionPane.showMessageDialog(frame, "Collections successfully generated!\n" +
+                                                                     "You can open the database file with CollectionManager\n" +
+                                                                     "to add them to your osu collections.", ":)",
+                                                              JOptionPane.PLAIN_MESSAGE);
+                            } else {
+                                JOptionPane.showMessageDialog(frame, "Error :(");
+                            }
+                            swapToButtonGenerate();
+                        });
+                        thread.start();
+                    }
                 }
 
             } else {
