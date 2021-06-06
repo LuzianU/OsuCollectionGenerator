@@ -25,7 +25,7 @@ public class Main {
     public static String osuRootDir;
     public static String osuSongDir;
 
-    public static final String CURRENT_VERSION = "v1.1";
+    public static final String CURRENT_VERSION = "v1.2";
     public static final String GIT_HUB_LATEST_URL = "https://github.com/LuzianU/OsuCollectionGenerator/releases/latest";
 
     public static HashMap<String, UserVariable> userVariables = new HashMap<>();
@@ -112,7 +112,8 @@ public class Main {
             System.out.println("-noUpdate");
     }
 
-    public static boolean generateFromOsuDb(UserInterface ui, File outputFile) {
+    public static boolean generateFromOsuDb(UserInterface ui, File outputFile) throws FileNotFoundException {
+        //Printer printer = new Printer("output.txt");
         final int[] counter = { 0 };
         final AtomicInteger[] percentage = { new AtomicInteger() };
         HashMap<String, ArrayList<BeatmapInfo>> collectionMap = new HashMap<>();
@@ -159,12 +160,16 @@ public class Main {
                             bpmInfos.add(info);
                             collectionMap.put(collectionName, bpmInfos);
                         }
+
+                        //printer.add(beatmap, info);
                     }
 
                 }
             }
 
         });
+
+        //printer.print();
 
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
         Date date = new Date();
@@ -326,6 +331,14 @@ public class Main {
                 "[Double] Weight for a 1/16 stream when calculating if the map has a complex rhythm.",
                 orderInUi++,
                 true));
+
+        userVariables.put(BROADEN_SEARCH, new UserVariable(
+                BROADEN_SEARCH,
+                0,
+                "<html>[0 or 1] Broaden search by also looking for 1/3 streams below the threshold." +
+                "<br>If you are mainly interested in complex patterns, set this variable to 1.",
+                orderInUi++,
+                false));
 
         try (FileInputStream is = new FileInputStream("config.properties")) {
             properties.load(is);

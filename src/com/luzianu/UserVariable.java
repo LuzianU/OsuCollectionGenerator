@@ -17,6 +17,7 @@ public class UserVariable {
     public final static String WEIGHT_8 = "weight8";
     public final static String WEIGHT_12 = "weight12";
     public final static String WEIGHT_16 = "weight16";
+    public final static String BROADEN_SEARCH = "broadenSearch";
 
     public String name;
     public double value;

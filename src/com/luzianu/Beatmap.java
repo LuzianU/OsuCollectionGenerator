@@ -4,6 +4,7 @@ import com.luzianu.database.IntDoublePair;
 import com.luzianu.database.TimingPoint;
 
 import java.util.List;
+import java.util.Optional;
 
 public class Beatmap {
     public String artist;
@@ -182,5 +183,10 @@ public class Beatmap {
                ", visualOverride=" + visualOverride +
                ", maniaScrollSpeed=" + maniaScrollSpeed +
                '}';
+    }
+
+    public double getStarRatingStdNoMod() {
+        Optional<IntDoublePair> optional = starRatingStandard.stream().filter(x -> x._int == 0).findFirst();
+        return optional.map(intDoublePair -> intDoublePair._double).orElse(Double.NaN);
     }
 }

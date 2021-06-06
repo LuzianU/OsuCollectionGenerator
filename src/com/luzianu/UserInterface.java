@@ -14,6 +14,7 @@ import java.awt.dnd.DropTargetDropEvent;
 import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.nio.file.Paths;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -114,12 +115,16 @@ public class UserInterface {
                             if (!file.getName().endsWith(".db"))
                                 file = new File(file.getAbsolutePath() + ".db");
                             System.out.println(file.getAbsolutePath());
-                            if (Main.generateFromOsuDb(this, file)) {
-                                JOptionPane.showMessageDialog(frame, "Collections successfully generated!\n" +
-                                                                     "You can open the database file with CollectionManager\n" +
-                                                                     "to add them to your osu collections.", ":)",
-                                                              JOptionPane.PLAIN_MESSAGE);
-                            } else {
+                            try {
+                                if (Main.generateFromOsuDb(this, file)) {
+                                    JOptionPane.showMessageDialog(frame, "Collections successfully generated!\n" +
+                                                                         "You can open the database file with CollectionManager\n" +
+                                                                         "to add them to your osu collections.", ":)",
+                                                                  JOptionPane.PLAIN_MESSAGE);
+                                } else {
+                                    JOptionPane.showMessageDialog(frame, "Error :(");
+                                }
+                            } catch (FileNotFoundException fileNotFoundException) {
                                 JOptionPane.showMessageDialog(frame, "Error :(");
                             }
                             swapToButtonGenerate();

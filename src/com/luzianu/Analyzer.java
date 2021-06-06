@@ -72,7 +72,8 @@ public class Analyzer {
             // since streams with lower than minStreamBpm are disregarded
             // and the 1/3 streams could be overlooked, search for them again
             // but only if the most common bpm's 1/3 streams are below the minStreamBpm
-            if (beatmapInfo.mostCommonBpm != -1 && beatmapInfo.mostCommonBpm * .75 * (1 - Main.userVariables.get(DELTA_VARIATION).value / 100.0) < Main.userVariables.get(MIN_STREAM_BPM).value) {
+            if (Main.userVariables.get(BROADEN_SEARCH).value == 1 &&
+                beatmapInfo.mostCommonBpm != -1 && beatmapInfo.mostCommonBpm * .75 * (1 - Main.userVariables.get(DELTA_VARIATION).value / 100.0) < Main.userVariables.get(MIN_STREAM_BPM).value) {
                 int newMinStreamBpm = (int) (beatmapInfo.mostCommonBpm * .75 * (1 - Main.userVariables.get(DELTA_VARIATION).value / 100.0));
 
                 manageHitObjects(beatmapInfo, hitObjects, newMinStreamBpm,
