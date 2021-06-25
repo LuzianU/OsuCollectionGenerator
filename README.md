@@ -11,6 +11,7 @@ Thanks a lot to Haron who gave me the motivation to work on this program and hel
 
 # Requirements
 - Java version 8 or above
+- [CollectionManager](https://github.com/Piotrekol/CollectionManager), so you can add the generated collections to your osu! ones
 - Both .jar files of this application's [latest release](https://github.com/LuzianU/OsuCollectionGenerator/releases/latest) in the same folder without having changed their name
 
 # Licenses
