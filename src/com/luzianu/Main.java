@@ -142,7 +142,7 @@ public class Main {
 
                 if (osuFile.exists()) {
                     // skip ones in skipBeatmapIds
-                    if (!skipBeatmapIds.contains(beatmap.difficultyId + "")) {
+                    if (!skipBeatmaps || !skipBeatmapIds.contains(beatmap.difficultyId + "")) {
                         BeatmapInfo info = Analyzer.analyze(osuFile);
 
                         if (info != null && info.isAccepted) {
