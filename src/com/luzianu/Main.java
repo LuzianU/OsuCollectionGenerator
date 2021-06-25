@@ -25,10 +25,11 @@ public class Main {
     public static String osuRootDir;
     public static String osuSongDir;
 
-    public static final String CURRENT_VERSION = "v1.2";
+    public static final String CURRENT_VERSION = "v1.3";
     public static final String GIT_HUB_LATEST_URL = "https://github.com/LuzianU/OsuCollectionGenerator/releases/latest";
 
     public static HashMap<String, UserVariable> userVariables = new HashMap<>();
+    public static ArrayList<String> skipBeatmapIds = new ArrayList<>();
 
     /**
      * If you run this code in your IDE make sure to add "-noUpdate" to the program arguments
@@ -112,7 +113,16 @@ public class Main {
             System.out.println("-noUpdate");
     }
 
-    public static boolean generateFromOsuDb(UserInterface ui, File outputFile) throws FileNotFoundException {
+    public static boolean generateFromOsuDb(UserInterface ui, File outputFile, boolean skipBeatmaps, CollectionDb defaultCollectionDb) throws FileNotFoundException {
+        if (new File("skipBeatmaps.txt").exists()) {
+            try (BufferedReader br = new BufferedReader(new FileReader(new File("skipBeatmaps.txt")))) {
+                for (String line; (line = br.readLine()) != null; ) {
+                    skipBeatmapIds.add(line.trim());
+                }
+            } catch (IOException ignored) {
+            }
+        }
+
         //Printer printer = new Printer("output.txt");
         final int[] counter = { 0 };
         final AtomicInteger[] percentage = { new AtomicInteger() };
@@ -131,39 +141,44 @@ public class Main {
                 File osuFile = Paths.get(osuSongDir, beatmap.folderName, beatmap.nameOfOsuFile).toFile();
 
                 if (osuFile.exists()) {
-                    BeatmapInfo info = Analyzer.analyze(osuFile);
+                    // skip ones in skipBeatmapIds
+                    if (!skipBeatmapIds.contains(beatmap.difficultyId + "")) {
+                        BeatmapInfo info = Analyzer.analyze(osuFile);
 
-                    if (info != null && info.isAccepted) {
-                        info.artist = beatmap.artist;
-                        info.title = beatmap.title;
-                        info.creator = beatmap.creator;
-                        info.difficulty = beatmap.difficulty;
-                        info.md5 = beatmap.md5;
+                        if (info != null && info.isAccepted) {
+                            info.artist = beatmap.artist;
+                            info.title = beatmap.title;
+                            info.creator = beatmap.creator;
+                            info.difficulty = beatmap.difficulty;
+                            info.md5 = beatmap.md5;
 
-                        String collectionName = "BPM Change";
-                        if (!info.isBpmChange) {
-                            int roundedBpm = (info.mostCommonBpm / 10) * 10;
-                            collectionName = "BPM " + roundedBpm + "-" + (roundedBpm + 9);
-                        }
+                            String collectionName = "BPM Change";
+                            if (!info.isBpmChange) {
+                                int roundedBpm = (info.mostCommonBpm / 10) * 10;
+                                collectionName = "BPM " + roundedBpm + "-" + (roundedBpm + 9);
+                            }
 
-                        if (info.isComplex) {
-                            collectionName = "BPM Complex";
-                        }
+                            if (info.isComplex) {
+                                collectionName = "BPM Complex";
+                            }
 
-                        ArrayList<BeatmapInfo> bpmInfos = collectionMap.getOrDefault(collectionName, new ArrayList<>());
-                        bpmInfos.add(info);
-                        collectionMap.put(collectionName, bpmInfos);
-
-                        if (info.isBpmChange) {
-                            collectionName = "BPM Change";
-                            bpmInfos = collectionMap.getOrDefault(collectionName, new ArrayList<>());
+                            ArrayList<BeatmapInfo> bpmInfos = collectionMap.getOrDefault(collectionName, new ArrayList<>());
                             bpmInfos.add(info);
                             collectionMap.put(collectionName, bpmInfos);
+
+                            if (info.isBpmChange) {
+                                collectionName = "BPM Change";
+                                bpmInfos = collectionMap.getOrDefault(collectionName, new ArrayList<>());
+                                bpmInfos.add(info);
+                                collectionMap.put(collectionName, bpmInfos);
+                            }
+
+                            if (!skipBeatmapIds.contains(beatmap.difficultyId + ""))
+                                skipBeatmapIds.add(beatmap.difficultyId + "");
+
+                            //printer.add(beatmap, info);
                         }
-
-                        //printer.add(beatmap, info);
                     }
-
                 }
             }
 
@@ -171,18 +186,38 @@ public class Main {
 
         //printer.print();
 
-        DateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
-        Date date = new Date();
-        int version = Integer.parseInt(dateFormat.format(date));
-        CollectionDb collectionDb = new CollectionDb(version);
+        CollectionDb collectionDb = defaultCollectionDb;
+        if (collectionDb == null) {
+            DateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
+            Date date = new Date();
+            int version = Integer.parseInt(dateFormat.format(date));
+            collectionDb = new CollectionDb(version);
+        }
 
         for (String key : collectionMap.keySet()) {
-            Collection collection = new Collection(key);
+            Collection collection = null;
+
+            boolean createNew = true;
+            for (Collection c : collectionDb.getCollections()) {
+                if (c.getName().equals(key)) {
+                    createNew = false;
+                    collection = c;
+                    break;
+                }
+            }
+            if (createNew)
+                collection = new Collection(key);
 
             for (BeatmapInfo beatmapInfo : collectionMap.get(key))
                 collection.addBeatmap(beatmapInfo.md5);
 
-            collectionDb.addCollection(collection);
+            if (createNew)
+                collectionDb.addCollection(collection);
+        }
+
+        try (PrintStream out = new PrintStream(new FileOutputStream("skipBeatmaps.txt"))) {
+            for (String id : skipBeatmapIds)
+                out.println(id);
         }
 
         try {

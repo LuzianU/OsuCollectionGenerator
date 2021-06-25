@@ -2,6 +2,7 @@ package com.luzianu;
 
 import com.luzianu.beatmap.BeatmapInfo;
 import com.luzianu.beatmap.Stream;
+import com.luzianu.io.CollectionDb;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
@@ -15,10 +16,16 @@ import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.text.DateFormat;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -86,53 +93,98 @@ public class UserInterface {
         buttonGenerate.setVisible(false);
         buttonGenerate.addActionListener(e -> {
             if (saveVariables()) {
-                JFileChooser fc = new JFileChooser();
-                fc.setDialogTitle("Choose where to save the generated collection. Do NOT overwrite any of your osu .db files!");
-                fc.setFileFilter(new FileFilter() {
-                    @Override
-                    public boolean accept(File f) {
-                        return f.isDirectory() || f.getName().endsWith(".db");
-                    }
+                Object[] options = { "Yes", "No", "Cancel" };
+                int dialogResultSkip = JOptionPane.showOptionDialog(frame, "Skip already calculated beatmaps?\n" +
+                                                                           "Yes will skip all the ones in the skipBeatmaps.txt file.\n" +
+                                                                           "Use this option if you want to analyze only newly added beatmaps the program has not seen before.\n" +
+                                                                           "If you are using different parameters than last time delete the skipBeatmaps.txt file before proceeding.\n" +
+                                                                           "No (Default) will analyze all of your beatmaps.",
+                                                                    "Select an Option", JOptionPane.YES_NO_CANCEL_OPTION,
+                                                                    JOptionPane.QUESTION_MESSAGE,
+                                                                    null, options, options[1]);
 
-                    @Override
-                    public String getDescription() {
-                        return "Collection database (*.db)";
+                if (dialogResultSkip == JOptionPane.CANCEL_OPTION || dialogResultSkip == JOptionPane.CLOSED_OPTION)
+                    return;
+
+                boolean skipBeatmaps = dialogResultSkip == JOptionPane.YES_OPTION;
+
+                int dialogResultModify = JOptionPane.showOptionDialog(frame, "Directly modify your collection.db file?\n" +
+                                                                             "Yes (Default) will add the generated collections directly to your collections.\n" +
+                                                                             "Your collection.db file will be backed up beforehand.\n" +
+                                                                             "No will generate a db file that you can import in CollectionManager.",
+                                                                      "Select an Option", JOptionPane.YES_NO_CANCEL_OPTION,
+                                                                      JOptionPane.QUESTION_MESSAGE,
+                                                                      null, options, options[0]);
+
+                final File[] file = new File[1];
+                final CollectionDb[] defaultCollectionDb = new CollectionDb[1];
+                Thread thread = new Thread(() -> {
+                    swapToGenerateProgressBar();
+                    if (!file[0].getName().endsWith(".db"))
+                        file[0] = new File(file[0].getAbsolutePath() + ".db");
+                    System.out.println(file[0].getAbsolutePath());
+                    try {
+                        if (Main.generateFromOsuDb(this, file[0], skipBeatmaps, defaultCollectionDb[0])) {
+                            JOptionPane.showMessageDialog(frame, "Collections successfully generated!\n" +
+                                                                 "You can open the database file with CollectionManager\n" +
+                                                                 "to add them to your osu collections if you chose to\n" +
+                                                                 "not directly modify your collection.db file.", ":)",
+                                                          JOptionPane.PLAIN_MESSAGE);
+                        } else {
+                            JOptionPane.showMessageDialog(frame, "Error :(");
+                        }
+                    } catch (FileNotFoundException fileNotFoundException) {
+                        JOptionPane.showMessageDialog(frame, "Error :(");
                     }
+                    swapToButtonGenerate();
                 });
 
-                if (fc.showSaveDialog(frame) == JFileChooser.APPROVE_OPTION) {
+                if (dialogResultModify == JOptionPane.YES_OPTION) {
+                    // Backup collection first
+                    File collectionDbFile = Paths.get(Main.osuRootDir, "collection.db").toFile();
 
-                    if (fc.getSelectedFile().equals(Paths.get(Main.osuRootDir, "osu!.db").toFile()) ||
-                        fc.getSelectedFile().equals(Paths.get(Main.osuRootDir, "collection.db").toFile()) ||
-                        fc.getSelectedFile().equals(Paths.get(Main.osuRootDir, "presence.db").toFile()) ||
-                        fc.getSelectedFile().equals(Paths.get(Main.osuRootDir, "scores.db").toFile())) {
-                        JOptionPane.showMessageDialog(frame, "Do NOT overwrite any of your osu .db files!",
-                                                      ":|", JOptionPane.INFORMATION_MESSAGE);
-                    } else {
-                        Thread thread = new Thread(() -> {
-                            swapToGenerateProgressBar();
-                            File file = fc.getSelectedFile();
-                            if (!file.getName().endsWith(".db"))
-                                file = new File(file.getAbsolutePath() + ".db");
-                            System.out.println(file.getAbsolutePath());
-                            try {
-                                if (Main.generateFromOsuDb(this, file)) {
-                                    JOptionPane.showMessageDialog(frame, "Collections successfully generated!\n" +
-                                                                         "You can open the database file with CollectionManager\n" +
-                                                                         "to add them to your osu collections.", ":)",
-                                                                  JOptionPane.PLAIN_MESSAGE);
-                                } else {
-                                    JOptionPane.showMessageDialog(frame, "Error :(");
-                                }
-                            } catch (FileNotFoundException fileNotFoundException) {
-                                JOptionPane.showMessageDialog(frame, "Error :(");
-                            }
-                            swapToButtonGenerate();
-                        });
-                        thread.start();
+                    DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss");
+                    String str = "collection " + dateFormat.format(new Date()) + ".db";
+                    try {
+                        Files.copy(collectionDbFile.toPath(), Paths.get(Main.osuRootDir, str), StandardCopyOption.REPLACE_EXISTING);
+                    } catch (IOException ioException) {
+                        ioException.printStackTrace();
+                    }
+                    file[0] = collectionDbFile;
+                    try {
+                        defaultCollectionDb[0] = CollectionDb.Reader.read(collectionDbFile);
+                    } catch (IOException ignored) {
+                    }
+                    thread.start();
+                } else if (dialogResultModify == JOptionPane.NO_OPTION) {
+                    JFileChooser fc = new JFileChooser();
+                    fc.setDialogTitle("Choose where to save the generated collection. Do NOT overwrite any of your osu .db files!");
+                    fc.setFileFilter(new FileFilter() {
+                        @Override
+                        public boolean accept(File f) {
+                            return f.isDirectory() || f.getName().endsWith(".db");
+                        }
+
+                        @Override
+                        public String getDescription() {
+                            return "Collection database (*.db)";
+                        }
+                    });
+
+                    if (fc.showSaveDialog(frame) == JFileChooser.APPROVE_OPTION) {
+
+                        if (fc.getSelectedFile().equals(Paths.get(Main.osuRootDir, "osu!.db").toFile()) ||
+                            fc.getSelectedFile().equals(Paths.get(Main.osuRootDir, "collection.db").toFile()) ||
+                            fc.getSelectedFile().equals(Paths.get(Main.osuRootDir, "presence.db").toFile()) ||
+                            fc.getSelectedFile().equals(Paths.get(Main.osuRootDir, "scores.db").toFile())) {
+                            JOptionPane.showMessageDialog(frame, "Do NOT overwrite any of your osu .db files!",
+                                                          ":|", JOptionPane.INFORMATION_MESSAGE);
+                        } else {
+                            file[0] = fc.getSelectedFile();
+                            thread.start();
+                        }
                     }
                 }
-
             } else {
                 JOptionPane.showMessageDialog(frame, "One or more of the text field values are incorrect.",
                                               ":(", JOptionPane.ERROR_MESSAGE);
